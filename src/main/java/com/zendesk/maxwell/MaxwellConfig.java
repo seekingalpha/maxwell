@@ -188,6 +188,11 @@ public class MaxwellConfig extends AbstractConfig {
 	public boolean kinesisMd5Keys;
 
 	/**
+	 * If true, add linebreaks before sending to Kinesis.
+	 */
+	public boolean kinesisLinebreak;
+
+	/**
 	 * {@link com.zendesk.maxwell.producer.MaxwellSQSProducer} Queue URI
 	 */
 	public String sqsQueueUri;
@@ -877,6 +882,7 @@ public class MaxwellConfig extends AbstractConfig {
 		parser.section( "kinesis" );
 		parser.accepts( "kinesis_stream", "kinesis stream name" )
 				.withOptionalArg();
+		parser.accepts("kinesis_linebreak", "adds a linebreak between records in Kinesis; [true|false]. default: false" ).withOptionalArg();
 
 		parser.section("sqs");
 		parser.accepts( "sqs_queue_uri", "SQS Queue uri" )
@@ -1155,6 +1161,7 @@ public class MaxwellConfig extends AbstractConfig {
 		this.producerPartitionFallback = fetchStringOption("producer_partition_by_fallback", options, properties, null);
 
 		this.kinesisStream  = fetchStringOption("kinesis_stream", options, properties, null);
+		this.kinesisLinebreak = fetchBooleanOption("kinesis_linebreak", options, properties, false);
 		this.kinesisMd5Keys = fetchBooleanOption("kinesis_md5_keys", options, properties, false);
 
 		this.sqsQueueUri = fetchStringOption("sqs_queue_uri", options, properties, null);
