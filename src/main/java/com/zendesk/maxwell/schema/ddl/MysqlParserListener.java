@@ -58,7 +58,13 @@ public class MysqlParserListener extends mysqlBaseListener {
 	}
 
 	private String getTable(Table_nameContext t) {
-		return unquote(t.name().getText());
+		String name;
+		if ( t.name() != null )
+			name = t.name().getText();
+		else
+			name = t.name_all_tokens().getText();
+
+		return unquote(name);
 	}
 
 	private TableAlter alterStatement() {
@@ -173,6 +179,14 @@ public class MysqlParserListener extends mysqlBaseListener {
 		ColumnDef c = this.columnDefs.removeFirst();
 		alterStatement().columnMods.add(new ChangeColumnMod(c.getName(), c, getColumnPosition()));
 	}
+
+	@Override
+	public void exitRename_column(Rename_columnContext ctx) {
+		String oldName = unquote(ctx.name(0).getText());
+		String newName = unquote(ctx.name(1).getText());
+		alterStatement().columnMods.add(new RenameColumnMod(oldName, newName));
+	}
+
 	@Override
 	public void exitDrop_column(mysqlParser.Drop_columnContext ctx) {
 		alterStatement().columnMods.add(new RemoveColumnMod(unquote(ctx.old_col_name().getText())));
@@ -381,7 +395,7 @@ public class MysqlParserListener extends mysqlBaseListener {
 		  name,
 		  colCharset,
 		  colType.toLowerCase(),
-		  -1,
+		  (short) -1,
 		  signed,
 		  enumValues,
 		  columnLength
