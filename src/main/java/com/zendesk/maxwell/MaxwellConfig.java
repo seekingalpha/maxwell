@@ -636,6 +636,8 @@ public class MaxwellConfig extends AbstractConfig {
 	 */
 	public int binlogEventQueueSize;
 
+	public long producerMaxValueSize;
+
 	/**
 	 * Build a default configuration object.
 	 */
@@ -855,6 +857,8 @@ public class MaxwellConfig extends AbstractConfig {
 				.withRequiredArg();
 		parser.accepts( "producer_ack_timeout", "producer message acknowledgement timeout in milliseconds" )
 				.withRequiredArg().ofType(Long.class);
+		parser.accepts( "producer_max_value_size", "producer message max size" )
+				.withRequiredArg().ofType(Long.class);
 
 		parser.separator();
 
@@ -893,6 +897,7 @@ public class MaxwellConfig extends AbstractConfig {
 		parser.addToSection("producer_partition_columns");
 		parser.addToSection("producer_partition_by_fallback");
 		parser.addToSection("producer_ack_timeout");
+		parser.addToSection("producer_max_value_size");
 
 		parser.section( "nats" );
 
@@ -1061,6 +1066,7 @@ public class MaxwellConfig extends AbstractConfig {
 		this.producerFactory    = fetchProducerFactory(options, properties);
 		this.producerType       = fetchStringOption("producer", options, properties, "stdout");
 		this.producerAckTimeout = fetchLongOption("producer_ack_timeout", options, properties, 0L);
+		this.producerMaxValueSize = fetchLongOption("producer_max_value_size", options, properties, 500000L);
 		this.bootstrapperType   = fetchStringOption("bootstrapper", options, properties, "async");
 		this.clientID           = fetchStringOption("client_id", options, properties, "maxwell");
 		this.replicaServerID    = fetchLongOption("replica_server_id", options, properties, 6379L);

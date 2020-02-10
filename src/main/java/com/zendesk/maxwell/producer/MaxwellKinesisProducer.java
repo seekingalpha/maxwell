@@ -4,6 +4,10 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
 
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.FutureCallback;
@@ -121,6 +125,23 @@ public class MaxwellKinesisProducer extends AbstractAsyncProducer {
 		String key = this.partitioner.getKinesisKey(r);
 		String value = r.toJSON(outputConfig);
 		int vsize = value.length();
+		final long maxValueSize = context.getConfig().producerMaxValueSize;
+
+		// get rid of largest value recursively to accommodate max_data_length
+		if (vsize > maxValueSize) {
+			logger.warn("{}.{} with key {} has size of {}. Removing largest values", r.getDatabase(), r.getTable(), key, vsize);
+			LinkedHashMap<String, Object> data = r.getData();
+			while (vsize > maxValueSize) {
+				Optional<Map.Entry<String, Object>> maxEntry = data.entrySet().stream().max(Comparator.comparing(e -> e.getValue().toString().length()));
+				if (maxEntry.isPresent()) {
+					data.remove(maxEntry.get().getKey());
+					value = r.toJSON(outputConfig);
+					vsize = value.length();
+				} else
+					break;
+			}
+			logger.info("{}.{} with key {} reduced to size {}", r.getDatabase(), r.getTable(), key, vsize);
+		}
 
 		ByteBuffer encodedValue = ByteBuffer.wrap(value.getBytes("UTF-8"));
 
