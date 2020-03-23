@@ -103,6 +103,7 @@ public class MaxwellKinesisProducer extends AbstractAsyncProducer {
 	private final boolean kinesisLinebreak;
 	private final ObjectMapper jsonParser;
 	private final Cache<String, Set<String>> cache;
+	private final Function<String, Set<String>> pkFromJson;
 
 	public MaxwellKinesisProducer(MaxwellContext context, String kinesisStream) {
 		super(context);
@@ -115,12 +116,24 @@ public class MaxwellKinesisProducer extends AbstractAsyncProducer {
 		this.kinesisStream = kinesisStream;
 		this.kinesisLinebreak = context.getConfig().kinesisLinebreak;
 		this.jsonParser = new ObjectMapper();
-
-
 		this.cache = CacheBuilder.newBuilder()
 				.maximumSize(500)
 				.expireAfterWrite(1, TimeUnit.HOURS)
 				.build();
+
+		// extract primary key/s from RowMap
+		this.pkFromJson = (json) -> {
+			try {
+				Map<String, Object> map = jsonParser.readValue(json, Map.class);
+				return map.keySet().stream().filter(k -> k.startsWith("pk")).map(k -> {
+					String[] parts = k.split("\\.");
+					return parts[1];
+				}).collect(Collectors.toSet());
+			} catch (IOException e) {
+				logger.error("error identifying table primary keys from {}", json, e);
+				return Sets.newHashSet("id");
+			}
+		};
 
 		Path path = Paths.get("kinesis-producer-library.properties");
 		if (Files.exists(path) && Files.isRegularFile(path)) {
@@ -146,22 +159,7 @@ public class MaxwellKinesisProducer extends AbstractAsyncProducer {
 		final String db = r.getDatabase();
 		final String table = r.getTable();
 
-		// extract primary key/s from RowMap
-		Function<String, Set<String>> pkFromJson = (json) -> {
-			try {
-				String jsonData = r.pkToJson(RowMap.KeyFormat.HASH);
-				Map<String, Object> map = jsonParser.readValue(jsonData, Map.class);
-				return map.keySet().stream().filter(k -> k.startsWith("pk")).map(k -> {
-					String[] parts = k.split("\\.");
-					return parts[1];
-				}).collect(Collectors.toSet());
-			} catch (IOException e) {
-				logger.error("error identifying table {}.{} primary keys", db, table, e);
-				return Sets.newHashSet("id");
-			}
-		};
-
-		final Set<String> keys = cache.get(table, () -> pkFromJson.apply(r.pkToJson(RowMap.KeyFormat.ARRAY)));
+		final Set<String> keys = cache.get(table, () -> pkFromJson.apply(r.pkToJson(RowMap.KeyFormat.HASH)));
 		LinkedHashMap<String, Object> reserve = new LinkedHashMap<>();
 
 		Function<LinkedHashMap<String, Object>, String> largestValueFn = (dataHolder) -> {
