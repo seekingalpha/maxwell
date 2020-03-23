@@ -178,9 +178,6 @@ public class MaxwellKinesisProducer extends AbstractAsyncProducer {
 					}
 					dataHolder.remove(entryKey);
 					val = r.toJSON(outputConfig);
-					if (kinesisLinebreak) {
-						val = val + '\n';
-					}
 				}
 				return val;
 			} catch (Exception e) {
@@ -206,9 +203,6 @@ public class MaxwellKinesisProducer extends AbstractAsyncProducer {
 							value = r.toJSON(outputConfig);
 						}
 					}
-					if (this.kinesisLinebreak) {
-						value = value + '\n';
-					}
 					vsize = value.length();
 				} else
 					break;
@@ -217,9 +211,9 @@ public class MaxwellKinesisProducer extends AbstractAsyncProducer {
 			if (!reserve.isEmpty()) {
 				data.putAll(reserve);
 				value = r.toJSON(outputConfig);
-				if (this.kinesisLinebreak) {
-					value = value + '\n';
-				}
+			}
+			if (this.kinesisLinebreak) {
+				value = value + '\n';
 			}
 		}
 
